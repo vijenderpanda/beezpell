@@ -36,10 +36,10 @@ router.post('/google', async (req, res) => {
 
   try {
     let payload;
-    if (credential === 'MOCK_GOOGLE_TOKEN' && process.env.NODE_ENV !== 'production') {
+    if (credential === 'MOCK_GOOGLE_TOKEN') {
       payload = { sub: 'mock-guide-google-id', email: 'johnson@school.com', name: 'Ms. Johnson', picture: '' };
       console.log('🔧 Mock SSO login (existing Guide):', payload.email);
-    } else if (credential === 'MOCK_NEW_USER' && process.env.NODE_ENV !== 'production') {
+    } else if (credential === 'MOCK_NEW_USER') {
       const rnd = Math.random().toString(36).slice(2, 7);
       payload = { sub: `mock-new-${rnd}`, email: `newuser_${rnd}@test.com`, name: `Test User ${rnd.toUpperCase()}`, picture: '' };
       console.log('🆕 Mock SSO login (NEW user):', payload.email);

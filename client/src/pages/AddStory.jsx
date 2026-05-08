@@ -75,21 +75,23 @@ const AddStory = () => {
   });
 
   return (
-    <div className="min-h-screen bg-background p-8">
-      <div className="max-w-3xl mx-auto">
+    <div className="min-h-screen bg-background safe-bottom">
+      <header className="app-header">
         <Button 
           variant="ghost" 
           onClick={() => navigate(-1)}
-          className="mb-8 -ml-4 gap-2"
+          className="gap-2 touch-target"
         >
           <ChevronLeft className="w-5 h-5" /> Back
         </Button>
+        <h1 className="text-lg sm:text-xl font-bold">Add Story</h1>
+        <div className="w-10" /> {/* Spacer */}
+      </header>
 
-        <h1 className="text-3xl font-bold mb-8">Add a New Story</h1>
-
-        <Card className="p-8">
+      <div className="page-container pt-4 sm:pt-8">
+        <Card className="p-4 sm:p-8">
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2 uppercase tracking-wider">
                   Story Title

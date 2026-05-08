@@ -23,21 +23,22 @@ const Library = () => {
   });
 
   return (
-    <div className="min-h-screen p-8 bg-background">
-      <div className="max-w-5xl mx-auto">
-        <header className="flex justify-between items-end mb-12">
-          <div>
-            <h1 className="text-4xl font-bold text-gray-900">Library</h1>
-            <p className="text-gray-500 mt-2">Find your next adventure or practice your words.</p>
-          </div>
-          {user?.role !== 'student' && (
-            <Link to="/add-story">
-              <Button className="gap-2">
-                <Plus className="w-5 h-5" /> Add Story
-              </Button>
-            </Link>
-          )}
-        </header>
+    <div className="min-h-screen bg-background safe-bottom">
+      <header className="app-header">
+        <h1 className="text-xl font-bold">Library</h1>
+        {user?.role !== 'student' && (
+          <Link to="/add-story">
+            <Button className="gap-2 px-4 py-2 text-sm">
+              <Plus className="w-4 h-4" /> Add Story
+            </Button>
+          </Link>
+        )}
+      </header>
+
+      <div className="page-container pt-4 sm:pt-8">
+        <div className="mb-6 sm:mb-8">
+          <p className="text-gray-500 text-sm sm:text-base">Find your next adventure or practice your words.</p>
+        </div>
 
         {/* Tabs */}
         <div className="flex gap-4 mb-8">
