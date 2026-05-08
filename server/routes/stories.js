@@ -3,83 +3,89 @@ const router = express.Router();
 const { v4: uuidv4 } = require('uuid');
 const { supabase } = require('../db/supabase');
 
-// Get stories (with optional filters)
-router.get('/', async (req, res) => {
-  const { created_by, classroom_id, class_code, is_public } = req.query;
-  let query = supabase.from('stories').select('*').order('created_at', { ascending: false });
+const multer = require('multer');
+const pdf = require('pdf-parse');
+const upload = multer({ storage: multer.memoryStorage() });
 
-  if (created_by) query = query.eq('created_by', created_by);
-  if (classroom_id) query = query.eq('classroom_id', classroom_id);
-  if (class_code) query = query.eq('class_code', class_code);
-  if (is_public) query = query.eq('is_public', 1);
+// Helper to extract text from buffer (PDF/TXT)
+async function extractTextFromFile(file) {
+  if (file.mimetype === 'application/pdf') {
+    const data = await pdf(file.buffer);
+    return data.text;
+  }
+  return file.buffer.toString('utf-8');
+}
 
-  const { data, error } = await query;
-  if (error) return res.status(500).json({ error: error.message });
-  res.json(data || []);
-});
+// Unified Ingest Route (handles URL, Text, and File)
+router.post('/ingest', upload.single('file'), async (req, res) => {
+  try {
+    const { title, author, source_type, url, full_text, grade_level, is_public, class_code, classroom_id, created_by } = req.body;
+    
+    let textToAnalyze = full_text || '';
 
-// Get single story with words
-router.get('/:id', async (req, res) => {
-  const { data: story } = await supabase.from('stories').select('*').eq('id', req.params.id).single();
-  if (!story) return res.status(404).json({ error: 'Story not found' });
-
-  const { data: words } = await supabase.from('word_lists').select('*').eq('story_id', story.id);
-  res.json({ ...story, words: words || [] });
-});
-
-// Create story
-router.post('/', async (req, res) => {
-  const { title, author, source_type, url, text, grade_level, is_public, class_code, classroom_id, created_by } = req.body;
-
-  // Handle text extraction
-  let final_text = text || '';
-  if (source_type === 'url' && url) {
-    try {
-      const fetch = require('node-fetch');
-      const cheerio = require('cheerio');
-      const response = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' }, timeout: 10000 });
-      const html = await response.text();
-      const $ = cheerio.load(html);
-      $('script, style, nav, footer, header, aside, iframe, form').remove();
-      final_text = $('article, main, .content, .post, .story, body').first().text().replace(/\s+/g, ' ').trim().slice(0, 50000);
-    } catch (err) {
-      console.error('URL scrape error:', err.message);
-      if (!text) return res.status(400).json({ error: 'Could not fetch URL content' });
+    // 1. Handle File Upload (PDF/TXT)
+    if (source_type === 'doc' && req.file) {
+      textToAnalyze = await extractTextFromFile(req.file);
+    } 
+    // 2. Handle URL Scraping
+    else if (source_type === 'url' && url) {
+      try {
+        const fetch = require('node-fetch');
+        const cheerio = require('cheerio');
+        const response = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' }, timeout: 10000 });
+        const html = await response.text();
+        const $ = cheerio.load(html);
+        $('script, style, nav, footer, header, aside, iframe, form').remove();
+        textToAnalyze = $('article, main, .content, .post, .story, body').first().text().replace(/\s+/g, ' ').trim();
+      } catch (err) {
+        console.error('URL scrape error:', err.message);
+        return res.status(400).json({ error: 'Could not fetch URL content' });
+      }
     }
-  }
 
-  if (!final_text || final_text.length < 20) return res.status(400).json({ error: 'Story text too short' });
+    if (!textToAnalyze || textToAnalyze.length < 20) {
+      return res.status(400).json({ error: 'Story text too short or could not be extracted' });
+    }
 
-  const storyId = uuidv4();
-  const isPublicInt = (is_public === 'true' || is_public === true || is_public === 1) ? 1 : 0;
+    const storyId = uuidv4();
+    const isPublicInt = (is_public === 'true' || is_public === true || is_public === 1) ? 1 : 0;
 
-  const { error: storyErr } = await supabase.from('stories').insert({
-    id: storyId, title, author, source_type: source_type || 'pasted', source_url: url || null,
-    full_text: final_text, grade_level, is_public: isPublicInt, class_code: class_code || null,
-    classroom_id: classroom_id || null, created_by
-  });
-  if (storyErr) return res.status(500).json({ error: storyErr.message });
-
-  // Extract words
-  const { extractSpellingWords, analyzeWords } = require('../services/claude');
-  const candidates = extractSpellingWords(final_text, parseInt(grade_level) || 4);
-  console.log(`📝 Extracted ${candidates.length} candidates from "${title}"`);
-
-  const analyzed = await analyzeWords(candidates, grade_level, final_text);
-  let wordCount = 0;
-
-  for (const w of analyzed) {
-    const { error } = await supabase.from('word_lists').insert({
-      id: uuidv4(), story_id: storyId, word: w.word, tier: w.tier, grade_level: parseInt(grade_level) || 4,
-      phonetic: w.phonetic, syllables: w.syllables, syllable_count: w.syllable_count,
-      definition: w.definition, example_sentence: w.example_sentence,
-      difficulty_score: w.difficulty_score || 0.5, memory_anchor: '✨'
+    // Save Story to Supabase
+    const { error: storyErr } = await supabase.from('stories').insert({
+      id: storyId, title, author, source_type: source_type || 'pasted', source_url: url || null,
+      full_text: textToAnalyze.slice(0, 50000), grade_level: parseInt(grade_level) || 4, 
+      is_public: isPublicInt, class_code: class_code || null,
+      classroom_id: classroom_id || null, created_by
     });
-    if (!error) wordCount++;
-  }
 
-  console.log(`📖 ${title}: ${wordCount} words saved`);
-  res.status(201).json({ id: storyId, title, wordCount });
+    if (storyErr) throw storyErr;
+
+    // AI Word Extraction
+    const { extractSpellingWords, analyzeWords } = require('../services/claude');
+    const candidates = extractSpellingWords(textToAnalyze, parseInt(grade_level) || 4);
+    const analyzed = await analyzeWords(candidates, grade_level, textToAnalyze);
+
+    let wordCount = 0;
+    for (const w of analyzed) {
+      const { error } = await supabase.from('word_lists').insert({
+        id: uuidv4(), story_id: storyId, word: w.word, tier: w.tier, grade_level: parseInt(grade_level) || 4,
+        phonetic: w.phonetic, syllables: w.syllables, syllable_count: w.syllable_count,
+        definition: w.definition, example_sentence: w.example_sentence,
+        difficulty_score: w.difficulty_score || 0.5, memory_anchor: '✨'
+      });
+      if (!error) wordCount++;
+    }
+
+    res.status(201).json({ id: storyId, title, wordCount });
+  } catch (err) {
+    console.error('Ingest error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Legacy POST / for backward compatibility
+router.post('/', async (req, res) => {
+  res.redirect(307, '/api/stories/ingest');
 });
 
 // Delete story
