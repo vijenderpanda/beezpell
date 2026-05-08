@@ -1,0 +1,27 @@
+{
+  "grade1": {
+    "easy": ["cat", "dog", "sun", "big", "red"],
+    "medium": ["house", "apple", "happy", "small", "green"],
+    "hard": ["friend", "school", "mother", "father", "orange"]
+  },
+  "grade2": {
+    "easy": ["bird", "blue", "fish", "play", "jump"],
+    "medium": ["garden", "winter", "summer", "yellow", "purple"],
+    "hard": ["beautiful", "together", "yesterday", "tomorrow", "calendar"]
+  },
+  "grade3": {
+    "easy": ["cloud", "storm", "grass", "river", "stone"],
+    "medium": ["mountain", "adventure", "treasure", "explore", "capture"],
+    "hard": ["encyclopedia", "mysterious", "fascinating", "imagination", "celebration"]
+  },
+  "grade4": {
+    "easy": ["branch", "forest", "shadow", "bridge", "island"],
+    "medium": ["courage", "honesty", "journey", "whisper", "glimmer"],
+    "hard": ["archaeology", "philosophical", "metaphorical", "phenomenon", "extraordinary"]
+  },
+  "grade5": {
+    "easy": ["ocean", "desert", "planet", "valley", "glacier"],
+    "medium": ["astronomy", "biological", "chemistry", "discovery", "equation"],
+    "hard": ["procrastination", "synchronization", "unbelievable", "characteristic", "environmental"]
+  }
+}
