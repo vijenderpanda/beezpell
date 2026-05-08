@@ -13,11 +13,19 @@ const Library = () => {
   const { user } = useAuthStore();
 
   const { data: stories, isLoading } = useQuery({
-    queryKey: ['stories'],
+    queryKey: ['stories', user?.id],
     queryFn: async () => {
-      const res = await axios.get('/api/stories', {
-        params: { class_code: user?.class_code }
-      });
+      // If student, get public + class stories
+      // If guide, get public + their own created stories
+      const params = { is_public: 1 };
+      
+      if (user?.role === 'learner' && user?.class_code) {
+        params.class_code = user.class_code;
+      } else if (user?.id) {
+        params.created_by = user.id;
+      }
+
+      const res = await axios.get('/api/stories', { params });
       return res.data;
     }
   });

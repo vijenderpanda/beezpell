@@ -16,6 +16,36 @@ async function extractTextFromFile(file) {
   return file.buffer.toString('utf-8');
 }
 
+// Get stories (with optional filters using OR logic)
+router.get('/', async (req, res) => {
+  const { created_by, classroom_id, class_code, is_public } = req.query;
+  let query = supabase.from('stories').select('*').order('created_at', { ascending: false });
+
+  // Use OR logic so users see public stories AND their own
+  const orConditions = [];
+  if (is_public) orConditions.push('is_public.eq.1');
+  if (created_by) orConditions.push(`created_by.eq.${created_by}`);
+  if (classroom_id) orConditions.push(`classroom_id.eq.${classroom_id}`);
+  if (class_code) orConditions.push(`class_code.eq.${class_code}`);
+
+  if (orConditions.length > 0) {
+    query = query.or(orConditions.join(','));
+  }
+
+  const { data, error } = await query;
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data || []);
+});
+
+// Get single story with words
+router.get('/:id', async (req, res) => {
+  const { data: story } = await supabase.from('stories').select('*').eq('id', req.params.id).single();
+  if (!story) return res.status(404).json({ error: 'Story not found' });
+
+  const { data: words } = await supabase.from('word_lists').select('*').eq('story_id', story.id);
+  res.json({ ...story, words: words || [] });
+});
+
 // Unified Ingest Route (handles URL, Text, and File)
 router.post('/ingest', upload.single('file'), async (req, res) => {
   try {

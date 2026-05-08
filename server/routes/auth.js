@@ -49,14 +49,19 @@ router.post('/google', async (req, res) => {
     const { sub: googleId, email, name, picture } = payload;
 
     // Find by google_id
-    let { data: user } = await supabase.from('users').select('*').eq('google_id', googleId).single();
+    let { data: users } = await supabase.from('users').select('*').eq('google_id', googleId);
+    let user = users?.[0];
 
     if (!user) {
       // Find by email
-      const { data: emailUser } = await supabase.from('users').select('*').eq('email', email).single();
+      const { data: emailUsers } = await supabase.from('users').select('*').eq('email', email);
+      const emailUser = emailUsers?.[0];
+
       if (emailUser) {
-        await supabase.from('users').update({ google_id: googleId, avatar_url: picture, provider: 'google' }).eq('id', emailUser.id);
-        const { data: updated } = await supabase.from('users').select('*').eq('id', emailUser.id).single();
+        const { data: updated, error: upErr } = await supabase.from('users').update({ 
+          google_id: googleId, avatar_url: picture, provider: 'google' 
+        }).eq('id', emailUser.id).select().single();
+        if (upErr) throw upErr;
         user = updated;
       } else {
         // Create new user
