@@ -76,6 +76,24 @@ export const useAuthStore = create((set, get) => ({
     }
   },
 
+  // ── Learner Onboarding ──
+  onboardLearner: async (grade, classCode) => {
+    set({ loading: true, error: null });
+    try {
+      const userId = get().user?.id;
+      const res = await axios.post('/api/auth/onboard-learner', { userId, grade, classCode });
+      const { user, token, classroom } = res.data;
+      localStorage.setItem('beezpell_user', JSON.stringify(user));
+      localStorage.setItem('beezpell_token', token);
+      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      set({ user, token, loading: false });
+      return { success: true, classroom };
+    } catch (err) {
+      set({ loading: false, error: err.response?.data?.error || 'Onboarding failed' });
+      return { success: false };
+    }
+  },
+
   // ── Demo login (username + password for admin/testing) ──
   loginDemo: async (username, password) => {
     set({ loading: true, error: null });

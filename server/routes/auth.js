@@ -164,6 +164,42 @@ router.post('/onboard-guide', async (req, res) => {
 });
 
 // ══════════════════════════════════════════════
+// LEARNER ONBOARDING
+// ══════════════════════════════════════════════
+router.post('/onboard-learner', async (req, res) => {
+  const { userId, grade, classCode } = req.body;
+  if (!userId) return res.status(400).json({ error: 'Missing userId' });
+
+  let classroomId = null;
+  let classroomData = null;
+  const gradeNum = parseInt(grade) || 4;
+
+  try {
+    if (classCode) {
+      // Find the classroom
+      const { data: classroom } = await supabase.from('classrooms').select('*').eq('class_code', classCode).single();
+      if (!classroom) return res.status(404).json({ error: 'Invalid Classroom Code' });
+      classroomId = classroom.id;
+      classroomData = classroom;
+    }
+
+    await supabase.from('users').update({ 
+      grade: gradeNum, 
+      class_code: classCode || null,
+      classroom_id: classroomId,
+      is_first_login: 0 
+    }).eq('id', userId);
+
+    const { data: user } = await supabase.from('users').select('*').eq('id', userId).single();
+
+    res.json({ success: true, user: safeUser(user), token: signToken(user), classroom: classroomData });
+  } catch (err) {
+    console.error('Learner onboarding error:', err);
+    res.status(500).json({ error: 'Failed to complete learner setup' });
+  }
+});
+
+// ══════════════════════════════════════════════
 // DEMO LOGIN
 // ══════════════════════════════════════════════
 router.post('/login', async (req, res) => {

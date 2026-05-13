@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import axios from 'axios';
+import { useAuthStore } from './authStore';
 
 /**
  * 7-Stage Word Journey State Machine
@@ -210,11 +211,25 @@ export const useQuizStore = create((set, get) => ({
       console.warn('Failed to finish quiz:', err.message);
     }
 
-    // Update user XP
+    // Update user XP locally in authStore so UI reflects immediately
     if (learner?.id) {
       try {
-        await axios.patch(`/api/users/${learner.id}/stats`, { xp: xpEarned, stars: starsEarned });
-      } catch (err) {}
+        const currentLocalUser = useAuthStore.getState().user;
+        if (currentLocalUser) {
+          useAuthStore.setState({
+            user: {
+              ...currentLocalUser,
+              xp: (currentLocalUser.xp || 0) + xpEarned,
+              stars: (currentLocalUser.stars || 0) + starsEarned,
+              streak_days: currentLocalUser.streak_days || 1
+            }
+          });
+          // Also update local storage
+          localStorage.setItem('beezpell_user', JSON.stringify(useAuthStore.getState().user));
+        }
+      } catch (err) {
+        console.warn('Could not update local auth store', err);
+      }
     }
   },
 }));

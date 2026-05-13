@@ -9,9 +9,26 @@ import { BookOpen, Play, Star, Zap, Flame, Library, Volume2, Settings, LogOut } 
 import { motion } from 'framer-motion';
 
 const LearnerHome = () => {
-  const { user, logout } = useAuthStore();
+  const { user, logout, onboardLearner, error } = useAuthStore();
   const navigate = useNavigate();
   const [difficulty, setDifficulty] = useState(user?.difficulty_default || 'medium');
+  
+  // Settings Modal State
+  const [showSettings, setShowSettings] = useState(false);
+  const [editGrade, setEditGrade] = useState(user?.grade || '4');
+  const [editClassCode, setEditClassCode] = useState(user?.class_code || '');
+  const [savingSettings, setSavingSettings] = useState(false);
+
+  const handleSaveSettings = async (e) => {
+    e.preventDefault();
+    setSavingSettings(true);
+    const result = await onboardLearner(editGrade, editClassCode);
+    setSavingSettings(false);
+    if (result?.success) {
+      setShowSettings(false);
+      // Optional: show a success toast here
+    }
+  };
 
   // Get the latest story from this learner's classroom
   const { data: latestStory } = useQuery({
@@ -76,7 +93,7 @@ const LearnerHome = () => {
           <div className="text-2xl sm:text-3xl">{user?.avatar || '🐝'}</div>
           <div>
             <h2 className="font-bold text-gray-800 text-sm sm:text-base">{user?.name}</h2>
-            <p className="text-[10px] sm:text-xs text-gray-400">Grade {user?.grade || '?'}</p>
+            <p className="text-[10px] sm:text-xs text-gray-400">Grade {user?.grade_level || user?.grade || '?'}</p>
           </div>
         </div>
         <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
@@ -94,7 +111,10 @@ const LearnerHome = () => {
               <span className="font-bold text-coral text-xs sm:text-sm">{user.streak_days}🔥</span>
             </div>
           )}
-          <button onClick={() => { logout(); navigate('/login'); }} className="text-gray-300 hover:text-gray-500 ml-1 sm:ml-2 touch-target flex items-center justify-center">
+          <button onClick={() => setShowSettings(true)} className="text-gray-300 hover:text-gray-500 ml-1 sm:ml-2 touch-target flex items-center justify-center" title="Settings">
+            <Settings className="w-4 h-4 sm:w-5 sm:h-5" />
+          </button>
+          <button onClick={() => { logout(); navigate('/login'); }} className="text-gray-300 hover:text-gray-500 ml-1 sm:ml-2 touch-target flex items-center justify-center" title="Log Out">
             <LogOut className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
         </div>
@@ -172,6 +192,48 @@ const LearnerHome = () => {
           </Card>
         </div>
       </main>
+
+      {/* Settings Modal */}
+      {showSettings && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="w-full max-w-md">
+            <Card className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-bold flex items-center gap-2"><Settings className="w-5 h-5 text-gray-400"/> Settings</h2>
+                <button onClick={() => setShowSettings(false)} className="text-gray-400 hover:text-gray-600">✕</button>
+              </div>
+              <form onSubmit={handleSaveSettings} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Grade Level</label>
+                  <select 
+                    value={editGrade} 
+                    onChange={e => setEditGrade(e.target.value)}
+                    className="input-field"
+                  >
+                    {[1,2,3,4,5].map(g => <option key={g} value={g}>Grade {g}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Classroom Code (Optional)</label>
+                  <input 
+                    type="text" 
+                    value={editClassCode} 
+                    onChange={e => setEditClassCode(e.target.value.toUpperCase())}
+                    placeholder="e.g. ABC-123"
+                    className="input-field text-center font-mono tracking-widest"
+                    maxLength={8}
+                  />
+                  <p className="text-[10px] text-gray-400 mt-1">Leave blank if you don't have a Guide.</p>
+                </div>
+                {error && <div className="p-3 bg-coral-light text-coral rounded-xl text-sm font-medium">{error}</div>}
+                <div className="pt-2">
+                  <Button type="submit" className="w-full" loading={savingSettings}>Save Changes</Button>
+                </div>
+              </form>
+            </Card>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 };

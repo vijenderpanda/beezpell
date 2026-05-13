@@ -69,14 +69,28 @@ router.post('/session/:id/complete', async (req, res) => {
     completed: 1, xp_earned, stars_earned: stars_earned || 0, duration_seconds, correct_count, forward_correct, reverse_correct
   }).eq('id', req.params.id);
 
-  // Update user XP + stars
+  // Update user XP + stars + streak
   const { data: session } = await supabase.from('quiz_sessions').select('user_id').eq('id', req.params.id).single();
   if (session) {
-    const { data: user } = await supabase.from('users').select('xp, stars').eq('id', session.user_id).single();
+    const { data: user } = await supabase.from('users').select('xp, stars, streak_days, last_active').eq('id', session.user_id).single();
     if (user) {
+      const now = new Date();
+      let streak = user.streak_days || 0;
+      
+      if (user.last_active) {
+        const lastActive = new Date(user.last_active);
+        const diffDays = Math.floor((now - lastActive) / (1000 * 60 * 60 * 24));
+        if (diffDays === 1) streak += 1;
+        else if (diffDays > 1) streak = 1;
+      } else {
+        streak = 1;
+      }
+
       await supabase.from('users').update({
         xp: (user.xp || 0) + (xp_earned || 0),
-        stars: (user.stars || 0) + (stars_earned || 0)
+        stars: (user.stars || 0) + (stars_earned || 0),
+        streak_days: streak,
+        last_active: now.toISOString()
       }).eq('id', session.user_id);
     }
   }

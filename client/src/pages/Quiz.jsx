@@ -42,6 +42,16 @@ const Quiz = () => {
     if (!words.length && location.state?.words) {
       initQuiz(location.state.words, location.state.sourceType, location.state.storyId, location.state.tier, user, location.state.guideName);
     }
+
+    // CLEANUP: If the user leaves the quiz via browser back button or swipe,
+    // automatically save any partial XP they earned.
+    return () => {
+      const state = useQuizStore.getState();
+      // If they earned XP and haven't already completed the quiz
+      if (state.xpEarned > 0 && state.currentStage !== 'complete') {
+        state.finishQuiz();
+      }
+    };
   }, []);
 
   useEffect(() => { setLocalInput(''); setShowFeedback(false); setFeedbackCorrect(false); }, [currentIndex, currentStage]);
@@ -122,7 +132,17 @@ const Quiz = () => {
     <div className="min-h-screen bg-background overflow-hidden safe-bottom">
       {/* Header — responsive */}
       <header className="app-header">
-        <button onClick={() => navigate(-1)} className="text-gray-400 hover:text-gray-600 touch-target flex items-center justify-center"><ArrowLeft className="w-5 h-5 sm:w-6 sm:h-6" /></button>
+        <button 
+          onClick={() => {
+            if (useQuizStore.getState().xpEarned > 0 && currentStage !== 'complete') {
+              useQuizStore.getState().finishQuiz();
+            }
+            navigate(-1);
+          }} 
+          className="text-gray-400 hover:text-gray-600 touch-target flex items-center justify-center"
+        >
+          <ArrowLeft className="w-5 h-5 sm:w-6 sm:h-6" />
+        </button>
         <div className="flex items-center gap-2 sm:gap-4">
           <div className="stat-pill bg-amber-light"><Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber" /><span className="text-amber">{xpEarned} XP</span></div>
           <div className="stat-pill bg-purple-light"><Star className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-purple" /><span className="text-purple">{starsEarned} ⭐</span></div>

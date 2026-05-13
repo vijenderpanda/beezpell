@@ -13,6 +13,7 @@ import Progress from './pages/Progress';
 import TeacherDashboard from './pages/TeacherDashboard';
 import TeacherOnboarding from './pages/TeacherOnboarding';
 import AdminDashboard from './pages/AdminDashboard';
+import LearnerOnboarding from './pages/LearnerOnboarding';
 
 // Aliases — TeacherDashboard = GuideDashboard, TeacherOnboarding = GuideOnboarding
 const GuideDashboard = TeacherDashboard;
@@ -69,6 +70,7 @@ const App = () => {
 
         {/* Learner (formerly Student/Child) */}
         <Route path="/learner" element={<ProtectedRoute allowedRoles={['learner']}><LearnerHome /></ProtectedRoute>} />
+        <Route path="/learner/onboarding" element={<ProtectedRoute allowedRoles={['learner']}><LearnerOnboarding /></ProtectedRoute>} />
 
         {/* Admin */}
         <Route path="/admin" element={<ProtectedRoute allowedRoles={['admin']}><AdminDashboard /></ProtectedRoute>} />

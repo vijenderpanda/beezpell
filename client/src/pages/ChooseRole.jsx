@@ -22,7 +22,7 @@ const ChooseRole = () => {
     if (role === 'guide') {
       navigate('/guide/onboarding');
     } else {
-      navigate('/');
+      navigate('/learner/onboarding');
     }
   };
 
